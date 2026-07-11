@@ -363,6 +363,32 @@ body::before {
   border: none;
   box-shadow: 0 0 12px var(--fg-glow);
 }
+
+ /* Fix horizontal proportions to match top mode buttons */
+.time-input-container,
+.alarm-sound-container,
+.start-button-container {
+  width: 100%;
+  padding-left: 16px;
+  padding-right: 16px;
+  box-sizing: border-box;
+}
+
+/* Ensure the inner grid/inputs stretch fully within container */
+.time-input-grid,
+.alarm-sound-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.start-button {
+  width: 100%;
+  max-width: none;
+}
+  
+  
 </style>
 </head>
 <body>
