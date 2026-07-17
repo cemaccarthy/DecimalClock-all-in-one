@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Decimal Clock">
+<title>Decimal Clock</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,700&display=swap');
+
+:root {
+  --bg: #F4EFE3;
+  --bg2: #FFFFFF;
+  --bg3: #E9E1CC;
+  --ink: #1A1A1A;
+  --red: #D7263D;
+  --red-dim: #A11B2C;
+  --red-tint: #F6D3D8;
+  --red-tint2: #EFBEC5;
+  --yellow: #FFD100;
+  --yellow-dim: #D1A800;
+  --blue: #1B4F9C;
+  --blue-dim: #123A73;
+  --blue-tint: #DAE4F3;
+  --blue-tint2: #C0D1EA;
+  --ochre: #C97A25;
+  --ochre-dim: #9C5E17;
+  --ochre-tint: #F1DDBF;
+  --fg: var(--red);
+  --fg-dim: var(--red-dim);
+  --text-dark: #1A1A1A;
+  --border: #1A1A1A;
+  --seg-off: #E3DACB;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  background: var(--bg);
+  color: var(--text-dark);
+  font-family: 'Poppins', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2.2rem 1.2rem 5rem;
+}
+
+/* Bauhaus geometric accent shapes, fixed backdrop */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image:
+    radial-gradient(circle at 88% 6%, var(--yellow) 0 58px, transparent 59px),
+    radial-gradient(circle at 4% 94%, var(--blue) 0 42px, transparent 43px);
+  background-repeat:no-repeat;
+  opacity:0.14;
+  pointer-events:none; z-index:0;
+}
+
+/* ── HEADER ── */
+.header {
+  text-align: center;
+  margin-bottom: 1.6rem;
+  z-index: 1;
+}
+.label-top {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  font-size: 1.5rem;
+  color: var(--ink);
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+.label-sub {
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  color: rgba(26,26,26,0.4);
+  text-transform: uppercase;
+}
+.header::after {
+  content: '';
+  display: block;
+  width: 84px;
+  height: 6px;
+  margin: 0.6rem auto 0;
+  background: linear-gradient(to right,
+    var(--red) 0 33.33%,
+    var(--yellow) 33.33% 66.66%,
+    var(--blue) 66.66% 100%);
+}
+
+/* ── TABS ── */
+.tab-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 0.35rem;
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: 1.1rem;
+  z-index: 1;
+}
+.tab-btn {
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.5rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 0.6rem 0.15rem;
+  cursor: pointer;
+  border-radius: 0;
+  border: 2px solid var(--border);
+  background: var(--bg2);
+  color: rgba(26,26,26,0.45);
+  transition: all 0.18s;
+  text-align: center;
+  white-space: nowrap;
+}
+.tab-btn.selected {
+  border-color: var(--ink);
+  color: #fff;
+  background: var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+#tab-clock.selected    { background: var(--red);  border-color: var(--red);  color: #fff; }
+#tab-timer.selected    { background: var(--yellow);border-color: var(--yellow);color: var(--ink); }
+#tab-stopwatch.selected{ background: var(--blue); border-color: var(--blue); color: #fff; }
+#tab-convert.selected  { background: var(--ink);  border-color: var(--ink);  color: #fff; }
+
+/* ── PANELS ── */
+.clock-panel,
+.setup-panel,
+.timer-panel,
+.stopwatch-panel,
+.convert-panel {
+  z-index: 1;
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.1rem;
+}
+.clock-panel.hidden,
+.setup-panel.hidden,
+.timer-panel.hidden,
+.stopwatch-panel.hidden,
+.convert-panel.hidden { display: none; }
+
+.timer-tab-wrap {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.1rem;
+}
+.timer-tab-wrap.hidden { display: none; }
+
+/* ── CARD ── */
+.card {
+  width: 100%;
+  background: var(--bg2);
+  border: 2px solid var(--border);
+  border-radius: 0;
+  padding: 1.1rem 1.2rem;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+/* ── TIME INPUTS ── */
+.time-input-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 1.2rem 1rem;
+}
+.time-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  flex: 1;
+  min-width: 0;
+}
+.time-field-label {
+  font-size: 0.48rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: rgba(26,26,26,0.5);
+  white-space: nowrap;
+}
+.time-field input {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: clamp(1.1rem, 6.5vw, 1.75rem);
+  width: 100%;
+  text-align: center;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-dark);
+  border-bottom: 2px solid var(--border);
+  padding: 0.1rem 0;
+  transition: border-color 0.2s;
+}
+.time-field input:focus { border-color: var(--red); }
+.time-field input.input-default-value { color: #B9AF98; }
+.time-sep {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: rgba(26,26,26,0.35);
+  padding-top: 1.1rem;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* ── ALARM SECTION ── */
+.alarm-title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--ink);
+  margin-bottom: 0.7rem;
+}
+.alarm-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.alarm-btn {
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.6rem 0.4rem;
+  cursor: pointer;
+  border-radius: 0;
+  border: 2px solid var(--border);
+  background: transparent;
+  color: rgba(26,26,26,0.5);
+  transition: all 0.18s;
+  text-align: center;
+}
+.alarm-btn.selected {
+  border-color: var(--red);
+  color: #fff;
+  background: var(--red);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+/* ── BUTTONS ── */
+.btn-row {
+  display: flex;
+  gap: 0.6rem;
+  width: 100%;
+}
+.btn {
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.75rem 0;
+  cursor: pointer;
+  border-radius: 0;
+  border: 2px solid var(--border);
+  background: var(--bg2);
+  color: var(--text-dark);
+  transition: all 0.18s;
+  flex: 1;
+  text-align: center;
+}
+.btn:active { background: var(--bg3); }
+.btn.btn-primary {
+  background: var(--red);
+  color: #fff;
+  border-color: var(--red);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.btn.btn-primary:active { background: var(--red-dim); box-shadow: 1px 1px 0 var(--ink); }
+.btn.btn-danger {
+  border-color: var(--red);
+  color: var(--red);
+  background: transparent;
+}
+.btn.btn-danger:active { background: var(--red-tint); }
+
+.btn.btn-danger-light {
+  border-color: var(--red);
+  color: var(--red);
+  background: var(--red-tint);
+}
+.btn.btn-danger-light:active { background: var(--red-tint2); }
+
+.btn.btn-danger-solid {
+  background: var(--red);
+  color: #fff;
+  border-color: var(--red);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.btn.btn-danger-solid:active { background: var(--red-dim); }
+
+.btn.btn-info {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: transparent;
+}
+.btn.btn-info:active { background: var(--blue-tint); }
+
+.btn.btn-blue {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.btn.btn-blue:active { background: var(--blue-dim); }
+
+.btn.btn-orange {
+  background: var(--ochre);
+  color: #fff;
+  border-color: var(--ochre);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.btn.btn-orange:active { background: var(--ochre-dim); }
+
+.btn.btn-orange-outline {
+  border-color: var(--ochre);
+  color: var(--ochre);
+  background: transparent;
+}
+.btn.btn-orange-outline:active { background: var(--ochre-tint); }
+
+.btn.btn-yellow {
+  background: var(--yellow);
+  color: var(--ink);
+  border-color: var(--yellow);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.btn.btn-yellow:active { background: var(--yellow-dim); }
+.btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ── 7-SEGMENT ── */
+.seg-display-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 1.6rem 1rem;
+}
+
+.seg-scale-wrap {
+  overflow: hidden;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.seg-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  transform-origin: center top;
+}
+
+@media (max-width: 359px) {
+  .seg-row { transform: scale(0.78); }
+  .seg-scale-wrap { height: 61px; }
+}
+
+.seg-digit {
+  width: 44px; height: 78px;
+  position: relative;
+  flex-shrink: 0;
+}
+.seg {
+  position: absolute;
+  background: var(--seg-off);
+  border-radius: 0;
+  transition: background 0.05s;
+}
+.seg.on {
+  background: var(--fg);
+}
+.seg-a { top:2px;   left:6px;  width:32px; height:5px; }
+.seg-g { top:36px;  left:6px;  width:32px; height:5px; }
+.seg-d { top:70px;  left:6px;  width:32px; height:5px; }
+.seg-f { top:6px;   left:2px;  width:5px;  height:28px; }
+.seg-b { top:6px;   right:2px; width:5px;  height:28px; }
+.seg-e { top:42px;  left:2px;  width:5px;  height:28px; }
+.seg-c { top:42px;  right:2px; width:5px;  height:28px; }
+
+.seg-colon {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-self: center;
+  margin: 0 2px 4px;
+  flex-shrink: 0;
+}
+.seg-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--fg);
+}
+
+.seg-label {
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  color: rgba(26,26,26,0.35);
+  text-transform: uppercase;
+}
+
+.info-line {
+  font-size: 0.56rem;
+  letter-spacing: 0.2em;
+  color: rgba(26,26,26,0.35);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* ── DAY PROGRESS ── */
+.progress-toggle-row { display: flex; justify-content: center; }
+.progress-toggle-row .btn { flex: 0 0 auto; padding: 0.55rem 1.4rem; }
+.progress-wrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.progress-wrap.hidden { display: none; }
+.progress-track {
+  width: 100%;
+  height: 10px;
+  background: var(--bg3);
+  border: 2px solid var(--border);
+  border-radius: 0;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--blue);
+  transition: width 0.2s linear;
+}
+.progress-caption {
+  font-size: 0.56rem;
+  letter-spacing: 0.2em;
+  color: rgba(26,26,26,0.35);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* ── CONVERTER ── */
+.convert-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.9rem;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 0;
+  padding: 0.55rem 0.75rem;
+}
+.convert-toggle-label-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.convert-seg-text {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+.convert-arrow {
+  position: relative;
+  width: 34px;
+  height: 16px;
+  flex-shrink: 0;
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+.convert-arrow::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 0;
+  width: 22px; height: 4px;
+  background: var(--blue);
+  transform: translateY(-50%);
+  border-radius: 0;
+}
+.convert-arrow::after {
+  content: '';
+  position: absolute;
+  top: 50%; right: 0;
+  width: 0; height: 0;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 11px solid var(--blue);
+  transform: translateY(-50%);
+}
+.convert-arrow.flipped { transform: rotate(180deg); }
+
+.btn-icon {
+  flex: 1;
+  padding: 0.55rem 0;
+  border-radius: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-width: 2px;
+  border-style: solid;
+  transition: all 0.18s;
+}
+.btn-icon svg { width: 20px; height: 20px; display: block; }
+.btn-icon.btn-icon-convert {
+  border-color: var(--blue);
+  background: var(--blue-tint);
+}
+.btn-icon.btn-icon-convert svg path { fill: var(--blue); }
+.btn-icon.btn-icon-convert:active { background: var(--blue-tint2); }
+.btn-icon.btn-icon-reset {
+  border-color: var(--red);
+  background: var(--red-tint);
+}
+.btn-icon.btn-icon-reset svg path { fill: var(--red); }
+.btn-icon.btn-icon-reset:active { background: var(--red-tint2); }
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--bg3);
+  border: 2px solid var(--blue);
+  transition: 0.2s;
+  border-radius: 0;
+}
+.switch .slider::before {
+  position: absolute;
+  content: '';
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: var(--blue);
+  transition: 0.2s;
+  border-radius: 50%;
+}
+.switch input:checked + .slider {
+  background-color: var(--blue);
+  border-color: var(--blue);
+}
+.switch input:checked + .slider::before {
+  background-color: #fff;
+  transform: translateX(20px);
+}
+.convert-section-title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: rgba(26,26,26,0.5);
+  text-align: center;
+  margin: 0.2rem 0 -0.4rem;
+}
+.convert-divider {
+  width: 100%;
+  height: 2px;
+  background: var(--border);
+  margin: 0.2rem 0;
+}
+.convert-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding-top: 1rem;
+  margin-top: 0.2rem;
+  border-top: 2px solid var(--border);
+}
+.convert-result.hidden { display: none; }
+.convert-result .seg-digit { width: 24px; height: 42px; }
+.convert-result .seg-a { top:1px;  left:3px;  width:18px; height:3px; }
+.convert-result .seg-g { top:19px; left:3px;  width:18px; height:3px; }
+.convert-result .seg-d { top:37px; left:3px;  width:18px; height:3px; }
+.convert-result .seg-f { top:3px;  left:1px;  width:3px;  height:15px; }
+.convert-result .seg-b { top:3px;  right:1px; width:3px;  height:15px; }
+.convert-result .seg-e { top:23px; left:1px;  width:3px;  height:15px; }
+.convert-result .seg-c { top:23px; right:1px; width:3px;  height:15px; }
+.convert-result .seg-colon { gap: 8px; margin: 0 1px 2px; }
+.convert-result .seg-dot { width: 4px; height: 4px; }
+.convert-result .seg-row { gap: 2px; transform: none; }
+
+/* ── LAPS ── */
+.laps-card.hidden { display: none; }
+.laps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.lap-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.1rem;
+  border-bottom: 2px solid var(--border);
+  font-family: 'Poppins', sans-serif;
+}
+.lap-row:last-child { border-bottom: none; }
+.lap-index {
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: rgba(26,26,26,0.45);
+  flex: 1;
+}
+.lap-time {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-dark);
+  flex: 1;
+  text-align: center;
+}
+.lap-diff {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--red);
+  flex: 1;
+  text-align: right;
+}
+
+/* ── ALARM OVERLAY ── */
+.alarm-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(244,239,227,0.97);
+  z-index: 100;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 2rem;
+}
+.alarm-overlay.active { display: flex; }
+.alarm-msg {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 800;
+  font-size: 1.3rem;
+  letter-spacing: 0.2em;
+  color: var(--red);
+  text-align: center;
+  animation: alarm-pulse 0.8s ease-in-out infinite;
+}
+@keyframes alarm-pulse {
+  0%,100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+.alarm-sub {
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  color: rgba(26,26,26,0.45);
+  text-transform: uppercase;
+  text-align: center;
+}
+.alarm-dismiss {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.8rem 3rem;
+  cursor: pointer;
+  border-radius: 0;
+  background: var(--red);
+  color: #fff;
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="label-top">Decimal Clock</div>
+  <div class="label-sub">clock &amp; countdown in decimal time</div>
+</div>
+
+<div class="tab-row">
+  <button class="tab-btn selected" id="tab-clock" onclick="switchTab('clock')">Clock</button>
+  <button class="tab-btn" id="tab-timer" onclick="switchTab('timer')">Timer</button>
+  <button class="tab-btn" id="tab-stopwatch" onclick="switchTab('stopwatch')">Stopwatch</button>
+  <button class="tab-btn" id="tab-convert" onclick="switchTab('convert')">Convert</button>
+</div>
+
+<!-- ══ CLOCK PANEL ══ -->
+<div class="clock-panel" id="clock-panel">
+  <div class="card seg-display-card">
+    <div class="seg-scale-wrap">
+      <div class="seg-row" id="clock-seg-row"></div>
+    </div>
+    <div class="seg-label">hours &nbsp;·&nbsp; min &nbsp;·&nbsp; sec</div>
+  </div>
+
+  <div class="progress-wrap hidden" id="progress-wrap">
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div class="progress-caption">day progress</div>
+  </div>
+
+  <div class="progress-toggle-row">
+    <button class="btn" id="progress-toggle-btn" onclick="toggleProgressBar()">Day Progress: Off</button>
+  </div>
+
+  <div class="info-line" id="infoLine">0:00:00 decimal · UTC-7</div>
+</div>
+
+<!-- ══ TIMER TAB ══ -->
+<div class="timer-tab-wrap hidden" id="timer-tab-wrap">
+
+  <!-- SETUP PANEL -->
+  <div class="setup-panel" id="setup-panel">
+
+    <div class="card time-input-card">
+      <div class="time-field">
+        <div class="time-field-label">Hours (0–9)</div>
+        <input type="number" id="in-h" min="0" max="9" value="00" inputmode="numeric">
+      </div>
+      <div class="time-sep">:</div>
+      <div class="time-field">
+        <div class="time-field-label">Min (00–99)</div>
+        <input type="number" id="in-m" min="0" max="99" value="05" inputmode="numeric">
+      </div>
+      <div class="time-sep">:</div>
+      <div class="time-field">
+        <div class="time-field-label">Sec (00–99)</div>
+        <input type="number" id="in-s" min="0" max="99" value="00" inputmode="numeric">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="alarm-title">Alarm Sound</div>
+      <div class="alarm-options">
+        <button class="alarm-btn selected" onclick="selectAlarm(0,this)">Chime</button>
+        <button class="alarm-btn" onclick="selectAlarm(1,this)">Bell</button>
+        <button class="alarm-btn" onclick="selectAlarm(2,this)">Pulse</button>
+        <button class="alarm-btn" onclick="selectAlarm(3,this)">Digital</button>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="startTimer()">Start</button>
+    </div>
+
+  </div>
+
+  <!-- TIMER PANEL -->
+  <div class="timer-panel hidden" id="timer-panel">
+
+    <div class="card seg-display-card">
+      <div class="seg-scale-wrap">
+        <div class="seg-row" id="timer-seg-row"></div>
+      </div>
+      <div class="seg-label">hours &nbsp;·&nbsp; min &nbsp;·&nbsp; sec</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" id="pause-btn" onclick="pauseResume()">Pause</button>
+      <button class="btn btn-danger-light" onclick="resetTimer()">Reset</button>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ══ STOPWATCH PANEL ══ -->
+<div class="stopwatch-panel hidden" id="stopwatch-panel">
+
+  <div class="card seg-display-card">
+    <div class="seg-scale-wrap">
+      <div class="seg-row" id="sw-seg-row"></div>
+    </div>
+    <div class="seg-label">hours &nbsp;·&nbsp; min &nbsp;·&nbsp; sec</div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-danger" id="sw-reset-btn" onclick="resetStopwatch()">Reset</button>
+    <button class="btn btn-primary" id="sw-start-btn" onclick="toggleStopwatch()">Start</button>
+    <button class="btn btn-orange-outline" id="sw-lap-btn" onclick="recordLap()" disabled>Lap</button>
+  </div>
+
+  <div class="card laps-card hidden" id="laps-card">
+    <div class="alarm-title">Laps</div>
+    <div class="laps-list" id="laps-list"></div>
+  </div>
+
+</div>
+
+<!-- ══ CONVERT PANEL ══ -->
+<div class="convert-panel hidden" id="convert-panel">
+
+  <div class="convert-section-title">Time of Day</div>
+
+  <div class="card">
+    <div class="convert-toggle-row">
+      <div class="convert-toggle-label-group">
+        <span class="convert-seg-text">DECIMAL</span>
+        <span class="convert-arrow" id="tod-arrow"></span>
+        <span class="convert-seg-text">STANDARD</span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="tod-mode-switch">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="time-input-card">
+      <div class="time-field">
+        <div class="time-field-label" id="tod-h-label">Hours (0–9)</div>
+        <input type="number" id="tod-h" min="0" max="9" value="00" inputmode="numeric">
+      </div>
+      <div class="time-sep">:</div>
+      <div class="time-field">
+        <div class="time-field-label" id="tod-m-label">Min (00–99)</div>
+        <input type="number" id="tod-m" min="0" max="99" value="00" inputmode="numeric">
+      </div>
+      <div class="time-sep">:</div>
+      <div class="time-field">
+        <div class="time-field-label" id="tod-s-label">Sec (00–99)</div>
+        <input type="number" id="tod-s" min="0" max="99" value="00" inputmode="numeric">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-icon btn-icon-convert" id="tod-convert-btn" type="button" aria-label="Convert">
+        <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M118.656 438.656a32 32 0 0 1 0-45.248L416 96l4.48-3.776A32 32 0 0 1 461.248 96l3.712 4.48a32.064 32.064 0 0 1-3.712 40.832L218.56 384H928a32 32 0 1 1 0 64H141.248a32 32 0 0 1-22.592-9.344zM64 608a32 32 0 0 1 32-32h786.752a32 32 0 0 1 22.656 54.592L608 928l-4.48 3.776a32.064 32.064 0 0 1-40.832-49.024L805.632 640H96a32 32 0 0 1-32-32z"/></svg>
+      </button>
+      <button class="btn-icon btn-icon-reset" id="tod-reset-btn" type="button" aria-label="Reset">
+        <svg viewBox="0 0 25 25" xmlns="http://www.w3.org/2000/svg"><path d="M4.56189 13.5L4.14285 13.9294L4.5724 14.3486L4.99144 13.9189L4.56189 13.5ZM9.92427 15.9243L15.9243 9.92427L15.0757 9.07574L9.07574 15.0757L9.92427 15.9243ZM9.07574 9.92426L15.0757 15.9243L15.9243 15.0757L9.92426 9.07574L9.07574 9.92426ZM19.9 12.5C19.9 16.5869 16.5869 19.9 12.5 19.9V21.1C17.2496 21.1 21.1 17.2496 21.1 12.5H19.9ZM5.1 12.5C5.1 8.41309 8.41309 5.1 12.5 5.1V3.9C7.75035 3.9 3.9 7.75035 3.9 12.5H5.1ZM12.5 5.1C16.5869 5.1 19.9 8.41309 19.9 12.5H21.1C21.1 7.75035 17.2496 3.9 12.5 3.9V5.1ZM5.15728 13.4258C5.1195 13.1227 5.1 12.8138 5.1 12.5H3.9C3.9 12.8635 3.92259 13.2221 3.9665 13.5742L5.15728 13.4258ZM12.5 19.9C9.9571 19.9 7.71347 18.6179 6.38048 16.6621L5.38888 17.3379C6.93584 19.6076 9.54355 21.1 12.5 21.1V19.9ZM4.99144 13.9189L7.42955 11.4189L6.57045 10.5811L4.13235 13.0811L4.99144 13.9189ZM4.98094 13.0706L2.41905 10.5706L1.58095 11.4294L4.14285 13.9294L4.98094 13.0706Z"/></svg>
+      </button>
+    </div>
+    <div class="convert-result hidden" id="tod-dec2std-wrap">
+      <div class="seg-scale-wrap">
+        <div class="seg-row" id="tod-dec2std-row"></div>
+      </div>
+      <div class="seg-label">standard hours &nbsp;·&nbsp; min &nbsp;·&nbsp; sec (24h)</div>
+    </div>
+    <div class="convert-result hidden" id="tod-std2dec-wrap">
+      <div class="seg-scale-wrap">
+        <div class="seg-row" id="tod-std2dec-row"></div>
+      </div>
+      <div class="seg-label">decimal hours &nbsp;·&nbsp; min &nbsp;·&nbsp; sec</div>
+    </div>
+  </div>
+
+  <div class="convert-divider"></div>
+  <div class="convert-section-title">Duration</div>
+
+  <div class="card">
+    <div class="convert-toggle-row">
+      <div class="convert-toggle-label-group">
+        <span class="convert-seg-text">DECIMAL</span>
+        <span class="convert-arrow" id="dur-arrow"></span>
+        <span class="convert-seg-text">STANDARD</span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="dur-mode-switch">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="time-input-card">
+      <div class="time-field">
+        <div class="time-field-label" id="dur-h-label">Hours (0–9)</div>
+        <input type="number" id="dur-h" min="0" max="9" value="00" inputmode="numeric">
+      </div>
+      <div class="time-sep">:</div>
+      <div class="time-field">
+        <div class="time-field-label" id="dur-m-label">Min (00–99)</div>
+        <input type="number" id="dur-m" min="0" max="99" value="00" inputmode="numeric">
+      </div>
+      <div class="time-sep">:</div>
+      <div class="time-field">
+        <div class="time-field-label" id="dur-s-label">Sec (00–99)</div>
+        <input type="number" id="dur-s" min="0" max="99" value="00" inputmode="numeric">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-icon btn-icon-convert" id="dur-convert-btn" type="button" aria-label="Convert">
+        <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M118.656 438.656a32 32 0 0 1 0-45.248L416 96l4.48-3.776A32 32 0 0 1 461.248 96l3.712 4.48a32.064 32.064 0 0 1-3.712 40.832L218.56 384H928a32 32 0 1 1 0 64H141.248a32 32 0 0 1-22.592-9.344zM64 608a32 32 0 0 1 32-32h786.752a32 32 0 0 1 22.656 54.592L608 928l-4.48 3.776a32.064 32.064 0 0 1-40.832-49.024L805.632 640H96a32 32 0 0 1-32-32z"/></svg>
+      </button>
+      <button class="btn-icon btn-icon-reset" id="dur-reset-btn" type="button" aria-label="Reset">
+        <svg viewBox="0 0 25 25" xmlns="http://www.w3.org/2000/svg"><path d="M4.56189 13.5L4.14285 13.9294L4.5724 14.3486L4.99144 13.9189L4.56189 13.5ZM9.92427 15.9243L15.9243 9.92427L15.0757 9.07574L9.07574 15.0757L9.92427 15.9243ZM9.07574 9.92426L15.0757 15.9243L15.9243 15.0757L9.92426 9.07574L9.07574 9.92426ZM19.9 12.5C19.9 16.5869 16.5869 19.9 12.5 19.9V21.1C17.2496 21.1 21.1 17.2496 21.1 12.5H19.9ZM5.1 12.5C5.1 8.41309 8.41309 5.1 12.5 5.1V3.9C7.75035 3.9 3.9 7.75035 3.9 12.5H5.1ZM12.5 5.1C16.5869 5.1 19.9 8.41309 19.9 12.5H21.1C21.1 7.75035 17.2496 3.9 12.5 3.9V5.1ZM5.15728 13.4258C5.1195 13.1227 5.1 12.8138 5.1 12.5H3.9C3.9 12.8635 3.92259 13.2221 3.9665 13.5742L5.15728 13.4258ZM12.5 19.9C9.9571 19.9 7.71347 18.6179 6.38048 16.6621L5.38888 17.3379C6.93584 19.6076 9.54355 21.1 12.5 21.1V19.9ZM4.99144 13.9189L7.42955 11.4189L6.57045 10.5811L4.13235 13.0811L4.99144 13.9189ZM4.98094 13.0706L2.41905 10.5706L1.58095 11.4294L4.14285 13.9294L4.98094 13.0706Z"/></svg>
+      </button>
+    </div>
+    <div class="convert-result hidden" id="dur-dec2std-wrap">
+      <div class="seg-scale-wrap">
+        <div class="seg-row" id="dur-dec2std-row"></div>
+      </div>
+      <div class="seg-label">standard hours &nbsp;·&nbsp; min &nbsp;·&nbsp; sec</div>
+    </div>
+    <div class="convert-result hidden" id="dur-std2dec-wrap">
+      <div class="seg-scale-wrap">
+        <div class="seg-row" id="dur-std2dec-row"></div>
+      </div>
+      <div class="seg-label">decimal hours &nbsp;·&nbsp; min &nbsp;·&nbsp; sec</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ ALARM OVERLAY ══ -->
+<div class="alarm-overlay" id="alarm-overlay">
+  <div class="alarm-msg">⏱ Time's Up ⏱</div>
+  <div class="alarm-sub">Decimal countdown complete</div>
+  <button class="alarm-dismiss" onclick="dismissAlarm()">Dismiss</button>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  7-SEGMENT ENGINE
+// ══════════════════════════════════════════════════════
+const SEG_MAP = {
+  '0':[1,1,1,1,1,1,0],'1':[0,1,1,0,0,0,0],'2':[1,1,0,1,1,0,1],
+  '3':[1,1,1,1,0,0,1],'4':[0,1,1,0,0,1,1],'5':[1,0,1,1,0,1,1],
+  '6':[1,0,1,1,1,1,1],'7':[1,1,1,0,0,0,0],'8':[1,1,1,1,1,1,1],
+  '9':[1,1,1,1,0,1,1],
+};
+
+function makeDigit() {
+  const d = document.createElement('div');
+  d.className = 'seg-digit';
+  ['a','b','c','d','e','f','g'].forEach(s => {
+    const el = document.createElement('div');
+    el.className = `seg seg-${s}`;
+    d.appendChild(el);
+  });
+  return d;
+}
+
+function makeColon() {
+  const c = document.createElement('div');
+  c.className = 'seg-colon';
+  c.innerHTML = '<div class="seg-dot"></div><div class="seg-dot"></div>';
+  return c;
+}
+
+function setDigit(el, ch) {
+  const p = SEG_MAP[ch] || [0,0,0,0,0,0,0];
+  ['a','b','c','d','e','f','g'].forEach((n,i) => {
+    el.querySelector(`.seg-${n}`).classList.toggle('on', !!p[i]);
+  });
+}
+
+function buildRow(container, pattern) {
+  container.innerHTML = '';
+  const els = [];
+  pattern.forEach(p => {
+    if (p === 'c') { container.appendChild(makeColon()); els.push(null); }
+    else { const d = makeDigit(); container.appendChild(d); els.push(d); }
+  });
+  return els.filter(Boolean);
+}
+
+function writeToRow(digits, str) {
+  const chars = str.replace(/[^0-9]/g,'').split('');
+  digits.forEach((d,i) => setDigit(d, chars[i] || '0'));
+}
+
+const clockRow = document.getElementById('clock-seg-row');
+const clockDigits = buildRow(clockRow, ['d','c','d','d','c','d','d']);
+
+const timerRow = document.getElementById('timer-seg-row');
+const timerDigits = buildRow(timerRow, ['d','c','d','d','c','d','d']);
+
+const swRow = document.getElementById('sw-seg-row');
+const swDigits = buildRow(swRow, ['d','c','d','d','c','d','d']);
+
+const DEC_PATTERN = ['d','c','d','d','c','d','d'];
+const STD_PATTERN = ['d','d','c','d','d','c','d','d'];
+
+const todStd2DecDigits = buildRow(document.getElementById('tod-std2dec-row'), DEC_PATTERN);
+const todDec2StdDigits = buildRow(document.getElementById('tod-dec2std-row'), STD_PATTERN);
+const durDec2StdDigits = buildRow(document.getElementById('dur-dec2std-row'), STD_PATTERN);
+const durStd2DecDigits = buildRow(document.getElementById('dur-std2dec-row'), DEC_PATTERN);
+
+// ══════════════════════════════════════════════════════
+//  FILL-IN NUMBER INPUTS
+//  Zeros/defaults render grey; tapping an input selects
+//  all of its text so a new digit simply overwrites it —
+//  no need to delete the placeholder value first.
+// ══════════════════════════════════════════════════════
+function initFillInInput(input) {
+  input.classList.add('input-default-value');
+  input.addEventListener('focus', function () { this.select(); });
+  input.addEventListener('input', function () { this.classList.remove('input-default-value'); });
+}
+function resetFillInInput(input, val) {
+  input.value = val;
+  input.classList.add('input-default-value');
+}
+
+['in-h', 'in-m', 'in-s', 'tod-h', 'tod-m', 'tod-s', 'dur-h', 'dur-m', 'dur-s']
+  .forEach(id => initFillInInput(document.getElementById(id)));
+
+// ══════════════════════════════════════════════════════
+//  TAB SWITCHING
+// ══════════════════════════════════════════════════════
+function switchTab(tab) {
+  document.getElementById('tab-clock').classList.toggle('selected', tab === 'clock');
+  document.getElementById('tab-timer').classList.toggle('selected', tab === 'timer');
+  document.getElementById('tab-stopwatch').classList.toggle('selected', tab === 'stopwatch');
+  document.getElementById('tab-convert').classList.toggle('selected', tab === 'convert');
+  document.getElementById('clock-panel').classList.toggle('hidden', tab !== 'clock');
+  document.getElementById('timer-tab-wrap').classList.toggle('hidden', tab !== 'timer');
+  document.getElementById('stopwatch-panel').classList.toggle('hidden', tab !== 'stopwatch');
+  document.getElementById('convert-panel').classList.toggle('hidden', tab !== 'convert');
+}
+
+// ══════════════════════════════════════════════════════
+//  BC PACIFIC TIME (permanent UTC-7) — DECIMAL CLOCK
+// ══════════════════════════════════════════════════════
+const BC_OFFSET_MS = -7 * 60 * 60 * 1000; // UTC-7, always
+
+function getBCMidnightFrac() {
+  const utcNow = Date.now();
+  const bcMs = utcNow + BC_OFFSET_MS;
+  const msInDay = bcMs % 86400000;
+  return (msInDay + 86400000) % 86400000 / 86400000;
+}
+
+// ══════════════════════════════════════════════════════
+//  DAY PROGRESS BAR (clock tab)
+//  The on/off preference is stored on-device so it stays
+//  on if the user comes back later.
+// ══════════════════════════════════════════════════════
+const CLOCK_PROGRESS_KEY = 'decimalClockProgressEnabled';
+let clockProgressEnabled = false;
+
+function saveClockProgressPref() {
+  try { localStorage.setItem(CLOCK_PROGRESS_KEY, JSON.stringify(clockProgressEnabled)); } catch (e) {}
+}
+function loadClockProgressPref() {
+  try {
+    const raw = localStorage.getItem(CLOCK_PROGRESS_KEY);
+    return raw ? JSON.parse(raw) : false;
+  } catch (e) { return false; }
+}
+function applyProgressBarState() {
+  document.getElementById('progress-wrap').classList.toggle('hidden', !clockProgressEnabled);
+  const btn = document.getElementById('progress-toggle-btn');
+  btn.classList.toggle('btn-primary', clockProgressEnabled);
+  btn.textContent = clockProgressEnabled ? 'Day Progress: On' : 'Day Progress: Off';
+}
+function toggleProgressBar() {
+  clockProgressEnabled = !clockProgressEnabled;
+  applyProgressBarState();
+  saveClockProgressPref();
+}
+clockProgressEnabled = loadClockProgressPref();
+applyProgressBarState();
+
+function clockTick() {
+  const frac = getBCMidnightFrac();
+  const decH = frac * 10;
+  const decM = (decH % 1) * 100;
+  const decS = (decM % 1) * 100;
+
+  const hh = Math.floor(decH) % 10;
+  const mm = Math.floor(decM);
+  const ss = Math.floor(decS);
+
+  writeToRow(clockDigits, String(hh) + String(mm).padStart(2,'0') + String(ss).padStart(2,'0'));
+
+  document.getElementById('infoLine').textContent =
+    `${hh}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')} decimal · UTC-7`;
+
+  if (clockProgressEnabled) {
+    document.getElementById('progress-fill').style.width = (frac * 100).toFixed(2) + '%';
+  }
+}
+
+clockTick();
+setInterval(clockTick, 100);
+
+// ══════════════════════════════════════════════════════
+//  AUDIO ENGINE
+// ══════════════════════════════════════════════════════
+let selectedAlarm = 0;
+let alarmInterval = null;
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function selectAlarm(idx, btn) {
+  selectedAlarm = idx;
+  document.querySelectorAll('.alarm-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function playChime(ctx) {
+  [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+    setTimeout(() => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine'; osc.frequency.setValueAtTime(f, ctx.currentTime);
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.4);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 1.5);
+    }, i * 120);
+  });
+}
+
+function playBell(ctx) {
+  [880, 1320, 2200].forEach((f, i) => {
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine'; osc.frequency.setValueAtTime(f, ctx.currentTime);
+    gain.gain.setValueAtTime(i === 0 ? 0.3 : 0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (i === 0 ? 2.2 : 1.2));
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 2.5);
+  });
+}
+
+function playPulse(ctx) {
+  for (let i = 0; i < 4; i++) {
+    const t = ctx.currentTime + i * 0.28;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'square'; osc.frequency.setValueAtTime(880, t);
+    gain.gain.setValueAtTime(0.15, t);
+    gain.gain.setValueAtTime(0.15, t + 0.14);
+    gain.gain.linearRampToValueAtTime(0, t + 0.18);
+    osc.start(t); osc.stop(t + 0.2);
+  }
+}
+
+function playDigital(ctx) {
+  const osc = ctx.createOscillator(), gain = ctx.createGain(), filter = ctx.createBiquadFilter();
+  osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+  osc.type = 'sawtooth'; filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(1200, ctx.currentTime);
+  osc.frequency.setValueAtTime(440, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 0.6);
+  gain.gain.setValueAtTime(0.2, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.65);
+  osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.7);
+  setTimeout(() => {
+    const o2 = ctx.createOscillator(), g2 = ctx.createGain();
+    o2.connect(g2); g2.connect(ctx.destination);
+    o2.type = 'sawtooth'; o2.frequency.setValueAtTime(330, ctx.currentTime);
+    o2.frequency.exponentialRampToValueAtTime(82, ctx.currentTime + 0.5);
+    g2.gain.setValueAtTime(0.15, ctx.currentTime);
+    g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+    o2.start(ctx.currentTime); o2.stop(ctx.currentTime + 0.6);
+  }, 380);
+}
+
+function playAlarm() {
+  const ctx = getAudioCtx();
+  if (ctx.state === 'suspended') ctx.resume();
+  [playChime, playBell, playPulse, playDigital][selectedAlarm](ctx);
+  fireLocalNotification();
+}
+
+function fireLocalNotification() {
+  // Best-effort: only works while the page/tab is alive; iOS home-screen
+  // web apps cannot receive notifications while fully closed without a
+  // push server, so this is a bonus, not a guarantee.
+  try {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification("Decimal Timer — Time's Up", { body: 'Decimal countdown complete', tag: 'decimal-timer' });
+    }
+  } catch (e) {}
+}
+
+function startAlarmLoop() {
+  playAlarm();
+  const intervals = [2500, 3000, 1800, 2000];
+  alarmInterval = setInterval(playAlarm, intervals[selectedAlarm]);
+}
+
+function stopAlarmLoop() {
+  if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
+}
+
+// ══════════════════════════════════════════════════════
+//  ALARM STATE PERSISTENCE (device-local storage)
+//  Only the timer/alarm and stopwatch features touch
+//  storage — the clock and converter never read or write
+//  anything locally.
+// ══════════════════════════════════════════════════════
+const ALARM_STORAGE_KEY = 'decimalTimerAlarmState';
+
+function saveAlarmState(state) {
+  try { localStorage.setItem(ALARM_STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+function loadAlarmState() {
+  try {
+    const raw = localStorage.getItem(ALARM_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+function clearAlarmState() {
+  try { localStorage.removeItem(ALARM_STORAGE_KEY); } catch (e) {}
+}
+function requestPersistentStorage() {
+  try {
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+  } catch (e) {}
+}
+function requestNotifyPermission() {
+  try {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  } catch (e) {}
+}
+
+// ══════════════════════════════════════════════════════
+//  TIMER ENGINE
+// ══════════════════════════════════════════════════════
+let timerRunning = false;
+let timerTotalMs = 0;
+let timerRemaining = 0;
+let timerStartTime = 0;
+let timerRAF = null;
+
+function decTimeToMs(h, m, s) {
+  return h * 8640000 + m * 86400 + s * 864;
+}
+
+// ══════════════════════════════════════════════════════
+//  SCREEN WAKE LOCK — keeps the display on only while the
+//  timer is actively counting down. Requires Safari 16.4+
+//  (iOS). Not persisted; re-requested automatically if the
+//  tab regains visibility while a timer is still running.
+// ══════════════════════════════════════════════════════
+let wakeLock = null;
+
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    }
+  } catch (e) { wakeLock = null; }
+}
+
+async function releaseWakeLock() {
+  try {
+    if (wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch (e) {}
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && timerRunning) {
+    requestWakeLock();
+  }
+});
+
+function msToDecParts(ms) {
+  const totalDecSec = ms / 864;
+  const h = Math.floor(totalDecSec / 10000) % 10;
+  const m = Math.floor(totalDecSec / 100) % 100;
+  const s = Math.floor(totalDecSec) % 100;
+  return { h, m, s };
+}
+
+function setPauseBtnStyle(isRunning) {
+  const btn = document.getElementById('pause-btn');
+  btn.classList.remove('btn-blue', 'btn-yellow');
+  btn.classList.add(isRunning ? 'btn-blue' : 'btn-yellow');
+}
+
+function startTimer() {
+  const h = parseInt(document.getElementById('in-h').value) || 0;
+  const m = parseInt(document.getElementById('in-m').value) || 0;
+  const s = parseInt(document.getElementById('in-s').value) || 0;
+  const totalMs = decTimeToMs(h, m, s);
+  if (totalMs <= 0) return;
+
+  const ctx = getAudioCtx();
+  if (ctx.state === 'suspended') ctx.resume();
+  requestPersistentStorage();
+  requestNotifyPermission();
+  requestWakeLock();
+
+  timerTotalMs = totalMs;
+  timerRemaining = totalMs;
+  timerStartTime = Date.now();
+  timerRunning = true;
+
+  saveAlarmState({
+    totalMs, startTime: timerStartTime, running: true,
+    pausedRemaining: null, finished: false, selectedAlarm
+  });
+
+  document.getElementById('setup-panel').classList.add('hidden');
+  document.getElementById('timer-panel').classList.remove('hidden');
+  document.getElementById('pause-btn').textContent = 'Pause';
+  setPauseBtnStyle(true);
+
+  renderTimer();
+  timerRAF = requestAnimationFrame(timerTick);
+}
+
+function timerTick() {
+  if (!timerRunning) return;
+  timerRemaining = Math.max(0, timerTotalMs - (Date.now() - timerStartTime));
+  renderTimer();
+  if (timerRemaining <= 0) { timerFinished(); return; }
+  timerRAF = requestAnimationFrame(timerTick);
+}
+
+function renderTimer() {
+  const { h, m, s } = msToDecParts(timerRemaining);
+  writeToRow(timerDigits, String(h) + String(m).padStart(2,'0') + String(s).padStart(2,'0'));
+}
+
+function timerFinished() {
+  timerRunning = false;
+  cancelAnimationFrame(timerRAF);
+  releaseWakeLock();
+  writeToRow(timerDigits, '0000000');
+  document.getElementById('alarm-overlay').classList.add('active');
+  saveAlarmState({
+    totalMs: timerTotalMs, startTime: timerStartTime, running: false,
+    pausedRemaining: 0, finished: true, selectedAlarm
+  });
+  startAlarmLoop();
+}
+
+function pauseResume() {
+  const btn = document.getElementById('pause-btn');
+  if (timerRunning) {
+    timerRunning = false;
+    cancelAnimationFrame(timerRAF);
+    releaseWakeLock();
+    timerRemaining = Math.max(0, timerTotalMs - (Date.now() - timerStartTime));
+    btn.textContent = 'Resume';
+    setPauseBtnStyle(false);
+    saveAlarmState({
+      totalMs: timerTotalMs, startTime: timerStartTime, running: false,
+      pausedRemaining: timerRemaining, finished: false, selectedAlarm
+    });
+  } else {
+    timerStartTime = Date.now() - (timerTotalMs - timerRemaining);
+    timerRunning = true;
+    requestWakeLock();
+    btn.textContent = 'Pause';
+    setPauseBtnStyle(true);
+    saveAlarmState({
+      totalMs: timerTotalMs, startTime: timerStartTime, running: true,
+      pausedRemaining: null, finished: false, selectedAlarm
+    });
+    timerRAF = requestAnimationFrame(timerTick);
+  }
+}
+
+function resetTimer() {
+  timerRunning = false;
+  cancelAnimationFrame(timerRAF);
+  releaseWakeLock();
+  stopAlarmLoop();
+  clearAlarmState();
+  document.getElementById('alarm-overlay').classList.remove('active');
+  document.getElementById('timer-panel').classList.add('hidden');
+  document.getElementById('setup-panel').classList.remove('hidden');
+  timerRemaining = 0; timerTotalMs = 0;
+  writeToRow(timerDigits, '0000000');
+}
+
+function dismissAlarm() {
+  releaseWakeLock();
+  stopAlarmLoop();
+  clearAlarmState();
+  document.getElementById('alarm-overlay').classList.remove('active');
+  document.getElementById('timer-panel').classList.add('hidden');
+  document.getElementById('setup-panel').classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════════════════
+//  STOPWATCH ENGINE — persisted to device storage so it
+//  keeps counting up (based on wall-clock time) even if
+//  the app is closed and reopened later.
+// ══════════════════════════════════════════════════════
+const STOPWATCH_STORAGE_KEY = 'decimalStopwatchState';
+
+let swRunning = false;
+let swElapsedMs = 0;
+let swStartTime = 0;
+let swRAF = null;
+let swLaps = [];
+
+function saveStopwatchState() {
+  try {
+    localStorage.setItem(STOPWATCH_STORAGE_KEY, JSON.stringify({
+      running: swRunning, startTime: swStartTime, elapsedMs: swElapsedMs, laps: swLaps
+    }));
+  } catch (e) {}
+}
+function loadStopwatchState() {
+  try {
+    const raw = localStorage.getItem(STOPWATCH_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+function clearStopwatchState() {
+  try { localStorage.removeItem(STOPWATCH_STORAGE_KEY); } catch (e) {}
+}
+
+function renderStopwatch(ms) {
+  const { h, m, s } = msToDecParts(ms);
+  writeToRow(swDigits, String(h) + String(m).padStart(2,'0') + String(s).padStart(2,'0'));
+}
+
+function swTick() {
+  if (!swRunning) return;
+  renderStopwatch(swElapsedMs + (Date.now() - swStartTime));
+  swRAF = requestAnimationFrame(swTick);
+}
+
+function updateStopwatchButtonColors() {
+  const resetBtn = document.getElementById('sw-reset-btn');
+  const lapBtn = document.getElementById('sw-lap-btn');
+  resetBtn.classList.remove('btn-danger', 'btn-danger-solid');
+  resetBtn.classList.add(swRunning ? 'btn-danger-solid' : 'btn-danger');
+  lapBtn.classList.remove('btn-orange-outline', 'btn-orange');
+  lapBtn.classList.add(swRunning ? 'btn-orange' : 'btn-orange-outline');
+}
+
+function setSwStartBtnStyle(state) {
+  // state: 'start' (green, untouched) | 'pause' (blue) | 'resume' (yellow)
+  const btn = document.getElementById('sw-start-btn');
+  btn.classList.remove('btn-primary', 'btn-blue', 'btn-yellow');
+  if (state === 'start') btn.classList.add('btn-primary');
+  else if (state === 'pause') btn.classList.add('btn-blue');
+  else btn.classList.add('btn-yellow');
+}
+
+function toggleStopwatch() {
+  const startBtn = document.getElementById('sw-start-btn');
+  const lapBtn = document.getElementById('sw-lap-btn');
+
+  if (!swRunning) {
+    swRunning = true;
+    swStartTime = Date.now();
+    requestPersistentStorage();
+    startBtn.textContent = 'Pause';
+    setSwStartBtnStyle('pause');
+    lapBtn.disabled = false;
+    swRAF = requestAnimationFrame(swTick);
+  } else {
+    swRunning = false;
+    cancelAnimationFrame(swRAF);
+    swElapsedMs += Date.now() - swStartTime;
+    startBtn.textContent = 'Resume';
+    setSwStartBtnStyle('resume');
+    lapBtn.disabled = true;
+  }
+  updateStopwatchButtonColors();
+  saveStopwatchState();
+}
+
+function formatDecTime(ms) {
+  const { h, m, s } = msToDecParts(ms);
+  return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function recordLap() {
+  if (!swRunning) return;
+  const current = swElapsedMs + (Date.now() - swStartTime);
+  const prevTotal = swLaps.length ? swLaps[swLaps.length - 1].totalMs : 0;
+  swLaps.push({ index: swLaps.length + 1, totalMs: current, splitMs: current - prevTotal });
+  renderLaps();
+  saveStopwatchState();
+}
+
+function renderLaps() {
+  const list = document.getElementById('laps-list');
+  const card = document.getElementById('laps-card');
+  if (!swLaps.length) {
+    card.classList.add('hidden');
+    list.innerHTML = '';
+    return;
+  }
+  card.classList.remove('hidden');
+  list.innerHTML = swLaps.slice().reverse().map(l =>
+    `<div class="lap-row">
+       <span class="lap-index">LAP ${l.index}</span>
+       <span class="lap-time">${formatDecTime(l.totalMs)}</span>
+       <span class="lap-diff">+${formatDecTime(l.splitMs)}</span>
+     </div>`
+  ).join('');
+}
+
+function resetStopwatch() {
+  swRunning = false;
+  cancelAnimationFrame(swRAF);
+  swElapsedMs = 0;
+  swLaps = [];
+  document.getElementById('sw-start-btn').textContent = 'Start';
+  setSwStartBtnStyle('start');
+  document.getElementById('sw-lap-btn').disabled = true;
+  updateStopwatchButtonColors();
+  renderStopwatch(0);
+  renderLaps();
+  clearStopwatchState();
+}
+
+function restoreStopwatchState() {
+  const st = loadStopwatchState();
+  if (!st) { renderStopwatch(0); renderLaps(); return; }
+
+  swLaps = st.laps || [];
+  const startBtn = document.getElementById('sw-start-btn');
+  const lapBtn = document.getElementById('sw-lap-btn');
+
+  if (st.running) {
+    swElapsedMs = st.elapsedMs;
+    swStartTime = st.startTime;
+    swRunning = true;
+    startBtn.textContent = 'Pause';
+    setSwStartBtnStyle('pause');
+    lapBtn.disabled = false;
+    renderStopwatch(swElapsedMs + (Date.now() - swStartTime));
+    swRAF = requestAnimationFrame(swTick);
+  } else {
+    swElapsedMs = st.elapsedMs || 0;
+    swRunning = false;
+    const hasTime = swElapsedMs > 0 || swLaps.length > 0;
+    startBtn.textContent = hasTime ? 'Resume' : 'Start';
+    setSwStartBtnStyle(hasTime ? 'resume' : 'start');
+    lapBtn.disabled = true;
+    renderStopwatch(swElapsedMs);
+  }
+  updateStopwatchButtonColors();
+  renderLaps();
+}
+
+restoreStopwatchState();
+
+// ══════════════════════════════════════════════════════
+//  CONVERTER (time-of-day + duration, standard ⇄ decimal)
+//  Stateless — no local storage used here.
+// ══════════════════════════════════════════════════════
+function standardTimeToMs(h, m, s) {
+  return ((h * 3600) + (m * 60) + s) * 1000;
+}
+
+function msToStandardParts(ms) {
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600) % 24;
+  const m = Math.floor(totalSec / 60) % 60;
+  const s = totalSec % 60;
+  return { h, m, s };
+}
+
+function clampInt(id, lo, hi) {
+  const v = parseInt(document.getElementById(id).value);
+  if (isNaN(v)) return 0;
+  return Math.max(lo, Math.min(hi, v));
+}
+
+// Each converter section (prefix 'tod' / 'dur') has one shared h/m/s input
+// set and a switch toggling which direction is active. 'dec2std' (decimal
+// entered, standard shown) is the default for both sections.
+const converterState = {};
+
+// Toggle sound effect (plays when switching decimal<->standard mode)
+const toggleSound = new Audio('data:audio/mpeg;base64,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mAL5iO5ClNFdLdVedR/Hqh6LZYFIsSZYrZJTzyQHFYOQ1mX4fQjj5blSulFDVqnvBfuTBqIqqvo+n75gYbMjk9ezgTQeoDPExaR4QccEBvyp5bVYvGjR13l/DiPntqLh7iBh/A1EbJBNRE0Rps3H3HXG4tXqpniYtPNjMFsfXa70gMDyIJCFajYm9sVMy5eKAFkg+DT8PdwxwA4JlLOVSrCgQMCgGCAWiLJGCAWiTGUGZdDuGpVDzXmHLGcp2XJdlyX9f2M0t74lpiVSaSRJMQbCMEw/EpdHb3j5MOx0SjI6JRJLK1apd2YHUp6tPTk5OSSdPWXR378wyPlxk0fLlTPbX4Fy55kxMSSemK1bLX22YVq2FcuXPWXWajhpa3tLns1ati2drSbsu1ZWregXLl3vQLl48ZjDAQplCz9mMKAgJF/wzLokBXAjCgCAwABmx6nBlqYwDQcQlQv1GIWnKkMishKVMicmEQonRcosTUd6wwi3EGNFCUNQ06VChqtiSxbXYTRNFDVacyHKJXJ45nJ9L10aSifHUhyHCxIaX1QvVtmrrbctWnJitPXWjKOs2aMnzoyXGQlGUcwUmWntXLkx7V2ZZP/70kSbAAXYaUDDLB3yx81XlnHsbhilpt4HsTHDArPamMexAfYYsgPoarTla6PROPlxkdH34OJZTHz37zVaxT21qtlvmTkmrTE5XLj5cfHQ5ASN/YPjJdbLQU+vTZcueZWnrLvTNXq1dgqtMVvzi5daAFUDGPU4VMhS5Q05lFt7FhJ4nSqfHMLcJsAZe4fFUyEpUcmMVoXVqQBQAQVCEIycsjyAVQ+Yl4nNklsmwEECJZgeaHEmrSSiJR9hkmfWsCETt7SUJS4lKiSYiCJJk3FCepl3iFtCkTKsEQWBIUqEy7iImRLkQWBIEiZclRCF8GioVBEzoCoxS7oVBVOAVFKFJsUoQqS6QgiSlnqkIIhY0rAVJoA0MoyWMSFwqTZIm0Nb42KZskIZZjFnkRpCkTKsCpOaFJ8EQApAcTRUEoDTgEgbCEEompwkoSicXSa4YnANhKBIdkpiiOYnjFgQic2epTFacmLtmxBMjI++To+sdO2aOhKVNRgVA8Ix8dH1UxkSjFxdGcnq2h0TXVtTlYTm+ll2vHS8RTgxdnDqM5iJRiYj0B4tYIRaOnBCPmVqZ89HI4LW6csCUjJKo5itNmrNMkmJcdHz1nmi6JK0xd2pyuMnrMsGRkfcdH1rW+g5Hta1rWtTm7rS61rWaOTExMWCUJROeBcaTEFNRTMuMTAwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq');
+toggleSound.volume = 0.6;
+function playToggleSound() {
+  toggleSound.currentTime = 0;
+  toggleSound.play().catch(() => {});
+}
+
+function applyConverterMode(prefix) {
+  const mode = converterState[prefix];
+  const hInput = document.getElementById(`${prefix}-h`);
+  const mInput = document.getElementById(`${prefix}-m`);
+  const sInput = document.getElementById(`${prefix}-s`);
+  const hLabel = document.getElementById(`${prefix}-h-label`);
+  const mLabel = document.getElementById(`${prefix}-m-label`);
+  const sLabel = document.getElementById(`${prefix}-s-label`);
+  const arrow = document.getElementById(`${prefix}-arrow`);
+  const dec2stdWrap = document.getElementById(`${prefix}-dec2std-wrap`);
+  const std2decWrap = document.getElementById(`${prefix}-std2dec-wrap`);
+
+  dec2stdWrap.classList.add('hidden');
+  std2decWrap.classList.add('hidden');
+
+  if (mode === 'dec2std') {
+    hInput.max = 9; mInput.max = 99; sInput.max = 99;
+    hLabel.textContent = 'Hours (0–9)';
+    mLabel.textContent = 'Min (00–99)';
+    sLabel.textContent = 'Sec (00–99)';
+    arrow.classList.remove('flipped');
+  } else {
+    hInput.max = 23; mInput.max = 59; sInput.max = 59;
+    hLabel.textContent = 'Hours (0–23)';
+    mLabel.textContent = 'Min (00–59)';
+    sLabel.textContent = 'Sec (00–59)';
+    arrow.classList.add('flipped');
+  }
+  resetFillInInput(hInput, '00');
+  resetFillInInput(mInput, '00');
+  resetFillInInput(sInput, '00');
+}
+
+function resetSingleConverter(prefix) {
+  converterState[prefix] = 'dec2std';
+  document.getElementById(`${prefix}-mode-switch`).checked = false;
+  applyConverterMode(prefix);
+}
+
+function wireConverter(prefix, dec2stdDigits, std2decDigits) {
+  converterState[prefix] = 'dec2std';
+  const toggle = document.getElementById(`${prefix}-mode-switch`);
+  const btn = document.getElementById(`${prefix}-convert-btn`);
+  const resetBtn = document.getElementById(`${prefix}-reset-btn`);
+  const hId = `${prefix}-h`, mId = `${prefix}-m`, sId = `${prefix}-s`;
+  const dec2stdWrap = document.getElementById(`${prefix}-dec2std-wrap`);
+  const std2decWrap = document.getElementById(`${prefix}-std2dec-wrap`);
+
+  applyConverterMode(prefix);
+
+  toggle.addEventListener('change', () => {
+    converterState[prefix] = toggle.checked ? 'std2dec' : 'dec2std';
+    applyConverterMode(prefix);
+    playToggleSound();
+  });
+
+  resetBtn.addEventListener('click', () => resetSingleConverter(prefix));
+
+  btn.addEventListener('click', () => {
+    if (converterState[prefix] === 'dec2std') {
+      const h = clampInt(hId, 0, 9), m = clampInt(mId, 0, 99), s = clampInt(sId, 0, 99);
+      const { h: sh, m: sm, s: ss } = msToStandardParts(decTimeToMs(h, m, s));
+      writeToRow(dec2stdDigits, `${String(sh).padStart(2,'0')}${String(sm).padStart(2,'0')}${String(ss).padStart(2,'0')}`);
+      dec2stdWrap.classList.remove('hidden');
+      std2decWrap.classList.add('hidden');
+    } else {
+      const h = clampInt(hId, 0, 23), m = clampInt(mId, 0, 59), s = clampInt(sId, 0, 59);
+      const { h: dh, m: dm, s: ds } = msToDecParts(standardTimeToMs(h, m, s));
+      writeToRow(std2decDigits, `${dh}${String(dm).padStart(2,'0')}${String(ds).padStart(2,'0')}`);
+      std2decWrap.classList.remove('hidden');
+      dec2stdWrap.classList.add('hidden');
+    }
+  });
+
+  [hId, mId, sId].forEach(id => document.getElementById(id).addEventListener('input', () => {
+    dec2stdWrap.classList.add('hidden');
+    std2decWrap.classList.add('hidden');
+  }));
+}
+
+wireConverter('tod', todDec2StdDigits, todStd2DecDigits);
+wireConverter('dur', durDec2StdDigits, durStd2DecDigits);
+
+// ══════════════════════════════════════════════════════
+//  RESTORE ALARM STATE ON LOAD
+//  Reconstructs the countdown from the stored end-time so
+//  it stays accurate across app closes, reopens, and lost
+//  network connections — everything here runs off the
+//  device clock, no network required.
+// ══════════════════════════════════════════════════════
+function restoreAlarmState() {
+  const st = loadAlarmState();
+  if (!st) { writeToRow(timerDigits, '0000000'); return; }
+
+  selectedAlarm = st.selectedAlarm || 0;
+  document.querySelectorAll('.alarm-btn').forEach((b, i) => b.classList.toggle('selected', i === selectedAlarm));
+
+  if (st.finished) {
+    timerTotalMs = st.totalMs; timerRemaining = 0; timerRunning = false;
+    switchTab('timer');
+    document.getElementById('setup-panel').classList.add('hidden');
+    document.getElementById('timer-panel').classList.remove('hidden');
+    writeToRow(timerDigits, '0000000');
+    document.getElementById('alarm-overlay').classList.add('active');
+    startAlarmLoop();
+    return;
+  }
+
+  const elapsed = Date.now() - st.startTime;
+  const remaining = st.running ? Math.max(0, st.totalMs - elapsed) : st.pausedRemaining;
+
+  if (st.running && remaining <= 0) {
+    timerTotalMs = st.totalMs; timerRemaining = 0; timerRunning = false;
+    switchTab('timer');
+    document.getElementById('setup-panel').classList.add('hidden');
+    document.getElementById('timer-panel').classList.remove('hidden');
+    writeToRow(timerDigits, '0000000');
+    document.getElementById('alarm-overlay').classList.add('active');
+    saveAlarmState({ ...st, finished: true, running: false });
+    startAlarmLoop();
+    return;
+  }
+
+  timerTotalMs = st.totalMs;
+  timerRemaining = remaining;
+  timerRunning = st.running;
+  timerStartTime = Date.now() - (st.totalMs - remaining);
+
+  switchTab('timer');
+  document.getElementById('setup-panel').classList.add('hidden');
+  document.getElementById('timer-panel').classList.remove('hidden');
+  document.getElementById('pause-btn').textContent = timerRunning ? 'Pause' : 'Resume';
+  setPauseBtnStyle(timerRunning);
+  renderTimer();
+  if (timerRunning) { timerRAF = requestAnimationFrame(timerTick); requestWakeLock(); }
+}
+
+restoreAlarmState();
+</script>
+</body>
+</html>
